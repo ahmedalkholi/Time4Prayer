@@ -1,4 +1,6 @@
-const select = document.querySelector("#select");
+const countriesList = document.querySelector("#countriesList");
+const cityInput = document.querySelector('#cityInput')
+const box = document.querySelector('#box')
 const fajr = document.querySelector(".fajr p");
 const shrook = document.querySelector(".shrook p");
 const dohr = document.querySelector(".dohr p");
@@ -8,26 +10,91 @@ const isha = document.querySelector(".isha p");
 const hijryData = document.querySelector(".hijry_data");
 const timeSection = document.querySelector(".time");
 
-const cities = [
-  { name: "Cairo", country: "Egypt" },
-  { name: "Alexandria", country: "Egypt" },
-  { name: "banha", country: "Egypt" },
-  { name: "Zagazig", country: "Egypt" },
-];
-let city;
-cities.forEach((city) => {
-  let option = document.createElement("option");
-  option.value = city.name;
-  option.text = city.name;
-  select.appendChild(option);
-});
+
+
+const countryApi = "https://countriesnow.space/api/v0.1/countries"
+function getCountries()
+{
+  fetch(countryApi)
+    .then(response => response.json())
+    .then(data =>
+    {
+      data.data.forEach(data =>
+        {
+          const option = document.createElement('option')
+          option.value = data.country
+          option.textContent = data.country
+          countriesList.appendChild(option)
+      })
+    })
+}
+getCountries()
+
+
+// const cities = [
+//   { name: "Cairo", country: "Egypt" },
+//   { name: "Alexandria", country: "Egypt" },
+//   { name: "banha", country: "Egypt" },
+//   { name: "Zagazig", country: "Egypt" },
+// ];
+// cities.forEach((city) => {
+  //   let option = document.createElement("option");
+  //   option.value = city.name;
+  //   option.text = city.name;
+  //   countriesList.appendChild(option);
+  // });
+  
+  
+let selectedCountry;
+let selectedCity;
+
 const url = "https://api.aladhan.com/v1/timingsByCity?country=egypt&city=";
 
-select.addEventListener("change", function (e) {
+countriesList.addEventListener("change", function () {
   const selected = this.value;
-  city = selected;
-  getData(city);
-});
+  selectedCountry = selected;
+  fetch("https://countriesnow.space/api/v0.1/countries/cities", {
+    method: 'post',
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({country: selectedCountry}),
+  })
+    .then(res => res.json())
+    .then(data =>
+    {
+      let cities = data.data
+      cityInput.addEventListener('input', function ()
+      {
+        const value = this.value.toLowerCase()
+        box.innerHTML = ''
+        if (!value) return;
+        
+        const filtered = cities
+          .filter(city => city.toLowerCase().includes(value))
+          .slice(0, 10)
+        
+        filtered.forEach(city =>
+        {
+          const div = document.createElement('div')
+          div.textContent = city
+
+          div.onclick = () =>
+          {
+            cityInput.value = city
+            selectedCity = cityInput.value
+            box.innerHTML = ''
+            getData(selectedCity);
+          }
+          box.appendChild(div)
+        })
+      })
+    })
+  
+
+  });
+
+
 function updatedClock() {
   const date = new Date();
   const hours24 = date.getHours();
