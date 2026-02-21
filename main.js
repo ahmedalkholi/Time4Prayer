@@ -74,6 +74,8 @@ cityInput.addEventListener('input', function() {
     });
 });
 
+cityInput.addEventListener('focus', () => cityInput.value = '')
+
 // --- 5. جلب مواقيت الصلاة ---
 function getData(city, country) {
     const url = `https://api.aladhan.com/v1/timingsByCity?city=${city}&country=${country}`;
@@ -94,16 +96,37 @@ function getData(city, country) {
             prayerElements.asr.innerHTML = formatTime(timings.Asr);
             prayerElements.maghreb.innerHTML = formatTime(timings.Maghrib);
             prayerElements.isha.innerHTML = formatTime(timings.Isha);
+            upNext(timings)
         });
+    }
+    // --- 6. دوال مساعدة (الوقت والفورمات) ---
+    function formatTime(timeValue) {
+        let [hour, minute] = timeValue.split(":");
+        hour = parseInt(hour);
+        let period = hour >= 12 ? "PM" : "AM";
+        hour = hour % 12 || 12;
+        return `${hour}:${minute} ${period}`;
 }
 
-// --- 6. دوال مساعدة (الوقت والفورمات) ---
-function formatTime(timeValue) {
-    let [hour, minute] = timeValue.split(":");
-    hour = parseInt(hour);
-    let period = hour >= 12 ? "PM" : "AM";
-    hour = hour % 12 || 12;
-    return `${hour}:${minute} ${period}`;
+function upNext(timings)
+{
+    const now = new Date()
+    const currentMinutes = (now.getHours() * 60) + now.getMinutes()
+    let prayers = [
+        { name: 'fajr', time: timings.Fajr },
+        { name: 'shrook', time: timings.Sunrise },
+        { name: 'dohr', time: timings.Dhuhr },
+        { name: 'asr', time: timings.Asr },
+        { name: 'maghreb', time: timings.Maghrib },
+        { name: 'isha', time: timings.Isha }
+    ]
+    let next = prayers.find(p =>
+    {
+        const [h, m] = p.time.split(':').map(Number)
+        return (h * 60 + m) > currentMinutes
+    })
+    if (!next)  next = prayers[0]
+    highlightNext(next.name)
 }
 
 function updatedClock() {
@@ -111,3 +134,24 @@ function updatedClock() {
     timeSection.innerHTML = date.toLocaleTimeString();
 }
 setInterval(updatedClock, 1000);
+
+window.onload = () =>
+{
+    const defaultCountry = 'Egypt'
+    const defaultCity = 'Cairo'
+
+    countriesList.value = defaultCountry
+    cityInput.value = defaultCity
+
+    getData(defaultCity, defaultCountry)
+}
+
+function highlightNext(item)
+{
+    document.querySelectorAll('.timing div').forEach(card =>
+    {
+        card.classList.remove('upNext')
+    })
+    const card = document.querySelector(`.${item}`)
+    card.classList.add('upNext')
+}
