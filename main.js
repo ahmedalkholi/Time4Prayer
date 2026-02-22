@@ -17,6 +17,9 @@ const prayerElements = {
 
 let allCities = []; // مخزن للمدن
 
+let currentTimings = null
+let next = null
+
 // --- 2. جلب قائمة الدول عند تحميل الصفحة ---
 function getCountries() {
     fetch("https://countriesnow.space/api/v0.1/countries")
@@ -69,20 +72,32 @@ cityInput.addEventListener('input', function() {
             box.innerHTML = '';
             // استدعاء بيانات الصلاة بناءً على المدينة والدولة المختارة
             getData(city, countriesList.value);
+            document.querySelector('#city').innerHTML = `${countriesList.value}, ${city}`
         };
         box.appendChild(div);
     });
 });
 
 cityInput.addEventListener('focus', () => cityInput.value = '')
-
+let currentZone
 // --- 5. جلب مواقيت الصلاة ---
 function getData(city, country) {
     const url = `https://api.aladhan.com/v1/timingsByCity?city=${city}&country=${country}`;
     
     fetch(url)
         .then(res => res.json())
-        .then(data => {
+        .then(data =>
+        {
+            const date = new Date();
+            currentZone = data.data.meta.timezone
+            const cityTime = date.toLocaleString('en-us', {
+                timeZone: currentZone,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            })
+            timeSection.innerHTML = cityTime
             const timings = data.data.timings;
             const hijri = data.data.date.hijri;
 
@@ -96,7 +111,8 @@ function getData(city, country) {
             prayerElements.asr.innerHTML = formatTime(timings.Asr);
             prayerElements.maghreb.innerHTML = formatTime(timings.Maghrib);
             prayerElements.isha.innerHTML = formatTime(timings.Isha);
-            upNext(timings)
+            currentTimings = timings
+            upNext(currentTimings)
         });
     }
     // --- 6. دوال مساعدة (الوقت والفورمات) ---
@@ -110,8 +126,15 @@ function getData(city, country) {
 
 function upNext(timings)
 {
-    const now = new Date()
-    const currentMinutes = (now.getHours() * 60) + now.getMinutes()
+    const date = new Date();
+    const cityTime = date.toLocaleString('en-us', {
+        timeZone: currentZone,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hourCycle: 'h23'
+    })
+    const currentMinutes = (cityTime.split(':')[0] * 60 + Number(cityTime.split(':')[1]))
     let prayers = [
         { name: 'fajr', time: timings.Fajr },
         { name: 'shrook', time: timings.Sunrise },
@@ -120,7 +143,7 @@ function upNext(timings)
         { name: 'maghreb', time: timings.Maghrib },
         { name: 'isha', time: timings.Isha }
     ]
-    let next = prayers.find(p =>
+    next = prayers.find(p =>
     {
         const [h, m] = p.time.split(':').map(Number)
         return (h * 60 + m) > currentMinutes
@@ -129,9 +152,66 @@ function upNext(timings)
     highlightNext(next.name)
 }
 
+function renderCountDown(timings)
+{
+    const date = new Date();
+    const localTime = date.toLocaleString('en-us', {
+        timeZone: currentZone,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hourCycle: 'h23'
+    })
+    
+    let prayers = [
+        { name: 'fajr', time: timings.Fajr },
+        { name: 'shrook', time: timings.Sunrise },
+        { name: 'dohr', time: timings.Dhuhr },
+        { name: 'asr', time: timings.Asr },
+        { name: 'maghreb', time: timings.Maghrib },
+        { name: 'isha', time: timings.Isha }
+    ]
+    prayers.filter(p =>
+        {
+        if (p.name === next.name)
+        {
+            const [hm, mm, sm] = localTime.split(':')
+            const [h, m] = p.time.split(':')
+            let mainHour = hm * 3600
+            let mainMinute = mm * 60
+            let mainTime = mainHour+mainMinute+Number(sm)
+            let prayHour = h*3600
+            let prayMinute = m * 60
+            let prayTime = prayHour + prayMinute
+            let deff = prayTime - mainTime
+            if (deff < 0)
+            {
+                deff = deff + (24 * 3600)
+            }
+            let hours = Math.floor(deff / 3600)
+            let minutes = Math.floor((deff % 3600) / 60)
+            let seconds = deff % 60
+            let displayTime =
+                String(hours).padStart(2, '0') + ':' +
+                String(minutes).padStart(2, '0') + ':' +
+                String(seconds).padStart(2, '0');
+            document.querySelector('.countDownValue').innerHTML = displayTime
+        }
+    })
+}
+
 function updatedClock() {
     const date = new Date();
-    timeSection.innerHTML = date.toLocaleTimeString();
+    const cityTime = date.toLocaleString('en-us', {
+        timeZone: currentZone,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+    })
+    timeSection.innerHTML = cityTime;
+    renderCountDown(currentTimings)
+    upNext(currentTimings)
 }
 setInterval(updatedClock, 1000);
 
@@ -144,6 +224,7 @@ window.onload = () =>
     cityInput.value = defaultCity
 
     getData(defaultCity, defaultCountry)
+    document.querySelector('#city').innerHTML = `${defaultCountry}, ${defaultCity}`
 }
 
 function highlightNext(item)
@@ -154,4 +235,4 @@ function highlightNext(item)
     })
     const card = document.querySelector(`.${item}`)
     card.classList.add('upNext')
-}
+}   

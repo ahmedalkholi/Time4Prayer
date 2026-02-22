@@ -6,13 +6,12 @@
     box-sizing: border-box;
 }
 body {
-    direction: rtl;
     padding: 2rem;
     background: linear-gradient(135deg, #1e3c72, #2a5298);
     color: white;
     font-family: 'Segoe UI', sans-serif;
     text-align: center;
-    direction: ltr;
+    direction: rtl;
 }
 .inputContainer {
     position: relative;
@@ -28,6 +27,7 @@ select, input, #box {
     -moz-border-radius: .4rem;
     -ms-border-radius: .4rem;
     -o-border-radius: .4rem;
+    direction: ltr;
 }
 input {
     border-radius: .4rem .4rem 0 0;
@@ -55,18 +55,19 @@ section,table {
     border-bottom: 1px solid black;
 }
 section.header {
-    display: flex;
-    gap: 2rem;
-    justify-content: space-between;
     padding-block: 1rem;
 }
-section.clock {
+section.clock, section.header, section.countDown {
     display: flex;
     justify-content: space-between;
     gap: 2rem;
+    flex-wrap: wrap;
+    text-align: center;
+    text-shadow: 0 0 10px rgba(255, 204, 0, 0.3);
 }
 .timing {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
@@ -79,6 +80,11 @@ section.clock {
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
     flex: 1;
+    min-width: fit-content;
+}
+.timing p {
+    font-size: 2rem;
+    direction: ltr;
 }
 .timing .upNext {
     border: 2px solid #ffcc00 !important; /* إطار ذهبي */
