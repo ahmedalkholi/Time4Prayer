@@ -21,35 +21,51 @@ let currentTimings = null
 let next = null
 
 // --- 2. جلب قائمة الدول عند تحميل الصفحة ---
-function getCountries() {
-    fetch("https://countriesnow.space/api/v0.1/countries")
-        .then(res => res.json())
-        .then(data => {
-            data.data.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item.country;
-                option.textContent = item.country;
-                countriesList.appendChild(option);
-            });
+async function getCountries() {
+    try {
+        let response = await fetch("https://countriesnow.space/api/v0.1/countries")
+        let data = await response.json()
+        if (!response.ok)
+        {
+            throw new Error('Http error', response.status)
+        }
+        data.data.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.country;
+            option.textContent = item.country;
+            countriesList.appendChild(option);
         });
+    }
+    catch (err)
+    {
+        console.error(err)
+    }
 }
 getCountries();
 
 // --- 3. عند اختيار دولة: نجلب مدنها ---
-countriesList.addEventListener("change", function() {
+countriesList.addEventListener("change", async function() {
     const selectedCountry = this.value;
     box.innerHTML = "جاري تحميل المدن...";
-    
-    fetch("https://countriesnow.space/api/v0.1/countries/cities", {
-        method: 'POST',
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ country: selectedCountry })
-    })
-    .then(res => res.json())
-    .then(data => {
+    try
+    {
+        let response = await fetch("https://countriesnow.space/api/v0.1/countries/cities", {
+            method: 'POST',
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ country: selectedCountry })
+        })
+        if (!response.ok)
+        {
+            throw new Error('Http error', response.status)
+        }
+        let data = await response.json()
         allCities = data.data; // حفظنا المدن هنا
-        box.innerHTML = ""; 
-    });
+        box.innerHTML = "";
+    }
+    catch (err)
+    {
+        console.error(err)
+    }
 });
 
 // --- 4. نظام البحث الذكي عن المدينة ---
@@ -81,40 +97,43 @@ cityInput.addEventListener('input', function() {
 cityInput.addEventListener('focus', () => cityInput.value = '')
 let currentZone
 // --- 5. جلب مواقيت الصلاة ---
-function getData(city, country) {
+async function getData(city, country) {
     const url = `https://api.aladhan.com/v1/timingsByCity?city=${city}&country=${country}`;
-    
-    fetch(url)
-        .then(res => res.json())
-        .then(data =>
-        {
-            const date = new Date();
-            currentZone = data.data.meta.timezone
-            const cityTime = date.toLocaleString('en-us', {
-                timeZone: currentZone,
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: true
-            })
-            timeSection.innerHTML = cityTime
-            const timings = data.data.timings;
-            const hijri = data.data.date.hijri;
+    try
+    {
+        let response = await fetch(url)
+        let data = await response.json()
+        const date = new Date();
+        currentZone = data.data.meta.timezone
+        const cityTime = date.toLocaleString('en-us', {
+            timeZone: currentZone,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        })
+        timeSection.innerHTML = cityTime
+        const timings = data.data.timings;
+        const hijri = data.data.date.hijri;
 
-            // عرض التاريخ الهجري
-            hijryData.innerHTML = `${hijri.day} ${hijri.month.ar} ${hijri.year}`;
+        // عرض التاريخ الهجري
+        hijryData.innerHTML = `${hijri.day} ${hijri.month.ar} ${hijri.year}`;
 
-            // تحديث العناصر (استخدمنا دالة فورمات الوقت اللي كنت عاملها)
-            prayerElements.fajr.innerHTML = formatTime(timings.Fajr);
-            prayerElements.shrook.innerHTML = formatTime(timings.Sunrise);
-            prayerElements.dohr.innerHTML = formatTime(timings.Dhuhr);
-            prayerElements.asr.innerHTML = formatTime(timings.Asr);
-            prayerElements.maghreb.innerHTML = formatTime(timings.Maghrib);
-            prayerElements.isha.innerHTML = formatTime(timings.Isha);
-            currentTimings = timings
-            upNext(currentTimings)
-        });
+        // تحديث العناصر (استخدمنا دالة فورمات الوقت اللي كنت عاملها)
+        prayerElements.fajr.innerHTML = formatTime(timings.Fajr);
+        prayerElements.shrook.innerHTML = formatTime(timings.Sunrise);
+        prayerElements.dohr.innerHTML = formatTime(timings.Dhuhr);
+        prayerElements.asr.innerHTML = formatTime(timings.Asr);
+        prayerElements.maghreb.innerHTML = formatTime(timings.Maghrib);
+        prayerElements.isha.innerHTML = formatTime(timings.Isha);
+        currentTimings = timings
+        upNext(currentTimings)
     }
+    catch (err)
+    {
+        console.error(err)
+    }
+}
     // --- 6. دوال مساعدة (الوقت والفورمات) ---
     function formatTime(timeValue) {
         let [hour, minute] = timeValue.split(":");
@@ -210,6 +229,7 @@ function updatedClock() {
         hour12: true
     })
     timeSection.innerHTML = cityTime;
+    if(!currentTimings) return
     renderCountDown(currentTimings)
     upNext(currentTimings)
 }
